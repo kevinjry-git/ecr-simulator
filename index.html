@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MME Dry Etcher — ECR Plasma Etch Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <div class="logo" aria-hidden="true"></div>
+            <div>
+                <h1>MME Dry Etcher</h1>
+                <span class="sub">ECR plasma etch · simulator &amp; explainer</span>
+            </div>
+        </div>
+
+        <div class="tower" id="tower" title="Signal tower">
+            <span class="lamp red"></span><span class="lamp amber"></span><span class="lamp green"></span>
+        </div>
+
+        <div class="status-block"><label>Tool state</label><span id="toolState" class="state">IDLE</span></div>
+        <div class="status-block"><label>Sim time</label><span id="simClock" class="mono">00:00:00</span></div>
+        <div class="status-block"><label>Wafers out</label><span id="wafersOut" class="mono">0</span></div>
+        <div class="status-block"><label>Throughput</label><span id="wph" class="mono">— WPH</span></div>
+
+        <div class="controls-block">
+            <button id="btnRun" class="btn primary" title="Pause / resume simulation">❚❚ Pause</button>
+            <button id="btnReset" class="btn" title="Reset the whole tool">⟲ Reset</button>
+            <div class="seg" id="speedSeg" title="Simulation speed">
+                <button data-speed="1">1×</button>
+                <button data-speed="5" class="on">5×</button>
+                <button data-speed="20">20×</button>
+                <button data-speed="60">60×</button>
+            </div>
+            <button id="btnTour" class="btn accent">★ Guided tour</button>
+        </div>
+    </header>
+
+    <main class="grid">
+        <section class="panel" id="panel-platform">
+            <div class="panel-head">
+                <h2>Platform · wafer handling</h2>
+                <div class="tools">
+                    <label>Load port
+                        <select id="lotLP">
+                            <option value="1">LP1</option>
+                            <option value="2">LP2</option>
+                            <option value="3">LP3</option>
+                            <option value="4">LP4</option>
+                            <option value="5">LP5</option>
+                        </select>
+                    </label>
+                    <label>Wafers <input id="lotCount" type="number" min="1" max="25" value="25"></label>
+                    <label>Chambers
+                        <select id="lotPair" title="Lots run on a chamber pair">
+                            <option value="auto">Auto pair</option>
+                            <option value="0">PM1 &amp; PM2</option>
+                            <option value="1">PM3 &amp; PM4</option>
+                            <option value="2">PM5 &amp; PM6</option>
+                        </select>
+                    </label>
+                    <button id="btnLot" class="btn primary small">Load &amp; run lot</button>
+                    <button id="btnSingle" class="btn small" title="Send one wafer to the selected PM">1 wafer → <span
+                            id="singlePM">PM1</span></button>
+                </div>
+            </div>
+            <div class="panel-body svg-wrap">
+                <svg id="platformSvg" viewBox="0 0 880 380" preserveAspectRatio="xMidYMid meet"></svg>
+            </div>
+        </section>
+
+        <aside class="panel" id="panel-explain">
+            <div class="panel-head">
+                <h2>Explainer</h2>
+                <label class="chk"><input type="checkbox" id="chkFollow" checked> Follow process</label>
+            </div>
+            <div class="panel-body explain-body">
+                <h3 id="explainTitle"></h3>
+                <div id="explainText"></div>
+            </div>
+            <div class="tour-nav" id="tourNav" hidden>
+                <button id="tourPrev" class="btn small">◀ Prev</button>
+                <span id="tourStep" class="mono"></span>
+                <button id="tourNext" class="btn primary small">Next ▶</button>
+                <button id="tourExit" class="btn small">Exit</button>
+            </div>
+        </aside>
+
+        <section class="panel" id="panel-chamber">
+            <div class="panel-head">
+                <h2>ECR process chamber · <span id="chamberTitle">PM1</span></h2>
+                <div class="tools">
+                    <label class="chk"><input type="checkbox" id="chkLabels" checked> Labels</label>
+                    <label class="chk"><input type="checkbox" id="chkField" checked> B-field lines</label>
+                    <label class="chk"><input type="checkbox" id="chkPreview" checked> Idle preview</label>
+                </div>
+            </div>
+            <div class="panel-body canvas-wrap">
+                <canvas id="chamberCanvas"></canvas>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-controls">
+            <div class="panel-head">
+                <h2>Recipe knobs · main etch</h2>
+                <div class="tools">
+                    <select id="recipeSel"></select>
+                    <button id="btnDefaults" class="btn small" title="Restore recipe defaults">Defaults</button>
+                    <button id="btnLoadCsv" class="btn small" title="Load a recipe from a CSV file">Load CSV…</button>
+                    <button id="btnExportCsv" class="btn small"
+                        title="Save the selected recipe (with knob edits) as CSV">Export CSV</button>
+                    <button class="btn small" data-topic="csv_format" title="Recipe CSV format">?</button>
+                    <input id="csvFile" type="file" accept=".csv,text/csv" hidden>
+                </div>
+            </div>
+            <div class="panel-body controls-body">
+                <div id="knobs" class="knobs"></div>
+                <div id="knobHint" class="hint"></div>
+                <h4 class="sect">Predicted main-etch result</h4>
+                <div id="metrics" class="metrics"></div>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-oes">
+            <div class="panel-head">
+                <h2>OES endpoint · <span id="oesTitle"></span></h2>
+            </div>
+            <div class="panel-body canvas-wrap">
+                <canvas id="oesCanvas"></canvas>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-recipe">
+            <div class="panel-head">
+                <h2>Recipe sequence · <span id="recipeTitle"></span></h2>
+            </div>
+            <div class="panel-body recipe-body">
+                <table class="steps">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Step</th>
+                            <th>Time</th>
+                            <th>µW</th>
+                            <th>Bias</th>
+                            <th>P (Pa)</th>
+                            <th>Gases (sccm)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stepsBody"></tbody>
+                </table>
+                <div id="waferResult" class="result"></div>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-alarms">
+            <div class="panel-head">
+                <h2>Alarms &amp; faults</h2>
+            </div>
+            <div class="panel-body alarms-body">
+                <div class="inject">
+                    <select id="faultSel"></select>
+                    <select id="faultTarget"></select>
+                    <button id="btnInject" class="btn danger small">Inject</button>
+                </div>
+                <div id="armedList" class="armed"></div>
+                <div id="alarmList" class="alarm-list"></div>
+                <h4 class="sect">Event log</h4>
+                <ul id="eventLog" class="log"></ul>
+            </div>
+        </section>
+    </main>
+
+    <div id="tooltip" class="tooltip" hidden></div>
+    <script src="app.js"></script>
+</body>
+
+</html>
