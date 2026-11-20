@@ -1,0 +1,24 @@
+Recipe,Poly gate - low damage
+Template,poly
+Film,Poly-Si,120
+Underlayer,Gate SiO2,1.5
+Nominal ER (nm/min),220
+Nominal selectivity,150
+Coil upper (A),21
+Coil middle (A),17
+Coil lower (A),9
+He backside (Pa),1200
+EPD species,SiCl
+EPD wavelength (nm),405
+EPD drop (%),35
+EPD max time (s),120
+
+Step,Name,Type,Time (s),Over-etch (%),uW (W),Bias (W),Pressure (Pa),Cl2,HBr,O2,CF4
+1,Base pressure check,BASE,3,,,,,,,,
+2,Gas stabilize,STAB,5,,,,,,,,
+3,Plasma ignite / tune,IGNITE,2,,,,,,,,
+4,Breakthrough,BT,5,,800,60,0.4,,,,50
+5,Main etch (EPD),ME,,,850,35,0.5,40,110,4,
+6,Soft landing over-etch,OE,,50,650,10,1.2,,130,5,
+7,Plasma off / purge,PURGE,4,,,,,,,,
+8,ESC dechuck / lift,DECHUCK,3,,,,,,,,
